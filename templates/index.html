@@ -6,12 +6,12 @@
     <title>Hospital Management System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        .table-container { overflow-x: auto; white-space: nowrap; }
-        .quick-actions { display: flex; gap: 10px; margin-bottom: 10px; padding: 5px; background: #f9f9f9; border-radius: 5px; }
-        .btn-quick { flex: 1; padding: 5px; background: #e0e0e0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
-        .btn-quick:hover { background: #d0d0d0; }
+        /* INLINE CSS FOR OCR & LAYOUT FIXES */
+        .table-container { 
+            overflow-x: auto; 
+            white-space: nowrap; 
+        }
         
-        /* New Styles for OCR Box */
         .ocr-box {
             background: #e8f5e9; 
             padding: 15px; 
@@ -20,6 +20,7 @@
             border: 2px dashed #4caf50;
             text-align: center;
         }
+
         .ocr-btn {
             background: #2e7d32; 
             color: white; 
@@ -31,6 +32,20 @@
             margin-top: 10px;
         }
         .ocr-btn:hover { background: #1b5e20; }
+        
+        .btn-quick { 
+            flex: 1; 
+            padding: 6px; 
+            background: #f5f5f5; 
+            border: 1px solid #ddd; 
+            border-radius: 15px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 11px; 
+            color: #555;
+            transition: background 0.2s;
+        }
+        .btn-quick:hover { background: #e0e0e0; color: #000; }
     </style>
 </head>
 <body>
@@ -41,7 +56,6 @@
 
 <div class="container">
     <div class="form-container">
-        
         <div class="ocr-box">
             <h3 style="margin-top: 0; color: #2e7d32;">📸 Smart Scan (AI Vision)</h3>
             <p style="font-size: 14px; color: #555;">Upload a prescription image to auto-fill Patient Name & Medicine.</p>
@@ -52,10 +66,11 @@
             </button>
             <div id="ocrStatus" style="margin-top: 10px; font-weight: bold; font-size: 13px; color: #333;"></div>
         </div>
+
         <form id="patientForm" action="/add" method="POST">
             <div class="form-grid">
-                <div class="form-group" style="grid-column: span 2; background: #e3f2fd; padding: 5px;">
-                    <label style="color: #0d47a1;">👨‍⚕️ Assign Doctor</label>
+                <div class="form-group" style="grid-column: span 2; background: #e3f2fd; padding: 10px; border-radius: 5px;">
+                    <label style="color: #0d47a1; font-weight: bold;">👨‍⚕️ Assign Doctor</label>
                     <select name="doctor" id="doctor">
                         <option value="">-- Select Doctor --</option>
                         {% for doc in doctors %}
@@ -67,71 +82,102 @@
                 <div class="form-group">
                     <label>Name of Tablets</label>
                     <select name="name" id="name">
-                        <option>Nice</option>
-                        <option>Corona Vaccine</option>
-                        <option>Acetaminophen</option>
-                        <option>Adderall</option>
-                        <option>Amlodipine</option>
-                        <option>Ativan</option>
+                        <option value="Nice">Nice</option>
+                        <option value="Corona Vaccine">Corona Vaccine</option>
+                        <option value="Acetaminophen">Acetaminophen</option>
+                        <option value="Adderall">Adderall</option>
+                        <option value="Amlodipine">Amlodipine</option>
+                        <option value="Ativan">Ativan</option>
+                        <option value="Paracetamol">Paracetamol</option>
+                        <option value="Dollo">Dollo</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Reference No</label><input type="text" name="ref" id="ref" required></div>
+
+                <div class="form-group">
+                    <label>Reference No</label>
+                    <input type="text" name="ref" id="ref" required placeholder="Enter Ref ID">
+                </div>
                 
                 <div class="form-group">
                     <label>Disease / Condition</label>
                     <input type="text" name="disease" id="disease" placeholder="e.g. Flu, Infection">
                 </div>
 
-                <div class="form-group"><label>Dose</label><input type="text" name="dose" id="dose"></div>
-                <div class="form-group"><label>No of Tablets</label><input type="text" name="no_of_tablets" id="no_of_tablets"></div>
-                <div class="form-group"><label>Lot</label><input type="text" name="lot" id="lot"></div>
-                <div class="form-group"><label>Issue Date</label><input type="date" name="issue_date" id="issue_date"></div>
-                <div class="form-group"><label>Exp Date</label><input type="date" name="exp_date" id="exp_date"></div>
-                <div class="form-group"><label>Daily Dose</label><input type="text" name="daily_dose" id="daily_dose"></div>
+                <div class="form-group">
+                    <label>Dose</label>
+                    <input type="text" name="dose" id="dose" placeholder="e.g. 500mg">
+                </div>
 
-                <div class="form-group"><label>Storage Advice</label><input type="text" name="storage" id="storage"></div>
-                <div class="form-group"><label>NHS Number</label><input type="text" name="nhs" id="nhs"></div>
-                <div class="form-group"><label>Patient Name</label><input type="text" name="pname" id="pname"></div>
-                <div class="form-group"><label>Date of Birth</label><input type="text" name="dob" id="dob"></div>
-                <div class="form-group"><label>Address</label><input type="text" name="address" id="address"></div>
+                <div class="form-group">
+                    <label>No of Tablets</label>
+                    <input type="text" name="no_of_tablets" id="no_of_tablets" placeholder="Total Qty">
+                </div>
+
+                <div class="form-group">
+                    <label>Lot</label>
+                    <input type="text" name="lot" id="lot" placeholder="Batch No">
+                </div>
+
+                <div class="form-group">
+                    <label>Issue Date</label>
+                    <input type="date" name="issue_date" id="issue_date">
+                </div>
+
+                <div class="form-group">
+                    <label>Exp Date</label>
+                    <input type="date" name="exp_date" id="exp_date">
+                </div>
+
+                <div class="form-group">
+                    <label>Daily Dose</label>
+                    <input type="text" name="daily_dose" id="daily_dose" placeholder="Doses per day">
+                </div>
+
+                <div class="form-group">
+                    <label>Storage Advice</label>
+                    <input type="text" name="storage" id="storage" placeholder="e.g. cool place">
+                </div>
+
+                <div class="form-group">
+                    <label>NHS Number</label>
+                    <input type="text" name="nhs" id="nhs" placeholder="NHS ID">
+                </div>
+
+                <div class="form-group">
+                    <label>Patient Name</label>
+                    <input type="text" name="pname" id="pname" placeholder="Full Name">
+                </div>
+
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <input type="text" name="dob" id="dob" placeholder="DD-MM-YYYY">
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Address</label>
+                    <input type="text" name="address" id="address" placeholder="Residential Address">
+                </div>
             </div>
 
             <div class="btn-group">
                 <button type="submit" class="btn btn-add">Add Prescription</button>
-                <button type="submit" formaction="/update" class="btn btn-update">Update</button>
-                <button type="button" onclick="deleteRecord()" class="btn btn-delete">Delete</button>
-                <button type="reset" class="btn btn-clear">Clear</button>
+                <button type="submit" formaction="/update" class="btn btn-update">Update Record</button>
+                <button type="button" onclick="deleteRecord()" class="btn btn-delete">Delete Patient</button>
+                <button type="reset" class="btn btn-clear">Clear Form</button>
             </div>
         </form>
     </div>
 
     <div class="bottom-section">
-        <div class="chat-box">
-            <h3>Interactive Patient Chatbot</h3>
-            <div id="chat-history" class="chat-history">
-                <div class="bot-msg">Hello! Select a patient row to enable quick buttons.</div>
-            </div>
-            
-            <div class="quick-actions">
-                <button onclick="triggerQuickAction('show')" class="btn-quick">Show Full Details</button>
-                <button onclick="triggerQuickAction('recommend')" class="btn-quick">Health Advice</button>
-                <button onclick="triggerQuickAction('supply')" class="btn-quick">Check Supply</button>
-            </div>
-
-            <div class="chat-input">
-                <input type="text" id="user-input" placeholder="Type here...">
-                <button onclick="sendMessage()">Send</button>
-            </div>
-        </div>
-
-        <div class="table-container">
+        <div class="table-container" style="width: 100%; height: 500px; border: 1px solid #ddd; background: white;">
             <table>
                 <thead>
                     <tr>
                         <th>Assigned Doctor</th>
                         <th>Ref No</th>
                         <th>Patient Name</th>
-                        <th>Disease</th> <th>Tablet</th>
+                        <th>Disease</th> 
+                        <th>Tablet</th>
                         <th>Dose</th>
                         <th>No of Tabs</th>
                         <th>Issue Date</th>
@@ -145,11 +191,12 @@
                 </thead>
                 <tbody>
                     {% for p in patients %}
-                    <tr onclick='fillForm({{ p|tojson }})'>
+                    <tr onclick='fillForm({{ p|tojson }})' style="cursor: pointer;">
                         <td style="font-weight:bold; color:blue;">{{ p.doctor }}</td>
                         <td>{{ p.Reference_No }}</td>
                         <td>{{ p.patientname }}</td>
-                        <td>{{ p.Disease }}</td> <td>{{ p.Nameoftablets }}</td>
+                        <td>{{ p.Disease }}</td> 
+                        <td>{{ p.Nameoftablets }}</td>
                         <td>{{ p.dose }}</td>
                         <td>{{ p.Numbersoftablets }}</td>
                         <td>{{ p.issuedate }}</td>
@@ -167,9 +214,46 @@
     </div>
 </div>
 
+<div id="robot-icon" onclick="toggleChat()">
+    <img src="{{ url_for('static', filename='robo.webp') }}" alt="AI Help">
+</div>
+
+<div id="chat-popup" class="chat-box" style="display: none;">
+    <div class="chat-header" style="background: #0d47a1; color: white; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: bold;">🤖 AI Health Assistant</span>
+        <button onclick="toggleChat()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">✖</button>
+    </div>
+    
+    <div id="chat-history" class="chat-history" style="height: 320px; overflow-y: auto; padding: 10px; background: #f9f9f9;">
+        <div class="bot-msg" style="color: #2e7d32; font-weight: bold; margin-bottom: 10px;">
+            Hello! I am your AI assistant. Click a patient row or type a Ref No (e.g., 666) to start.
+        </div>
+    </div>
+    
+    <div class="quick-actions" style="padding: 8px; background: #eeeeee; display: flex; gap: 8px; border-top: 1px solid #ddd;">
+        <button onclick="triggerQuickAction('show')" class="btn-quick">Details</button>
+        <button onclick="triggerQuickAction('recommend')" class="btn-quick">Advice</button>
+        <button onclick="triggerQuickAction('supply')" class="btn-quick">Supply</button>
+    </div>
+
+    <div class="chat-input" style="padding: 10px; border-top: 1px solid #ccc; display: flex; gap: 8px; background: white;">
+        <input type="text" id="user-input" placeholder="Ask about dosage, supply, or health..." style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+        <button onclick="sendMessage()" style="padding: 8px 15px; background: #0d47a1; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Send</button>
+    </div>
+</div>
+
 <script>
     let currentRef = "";
 
+    // ⌨️ Event Listener for 'Enter' Key
+    document.getElementById("user-input").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // 📋 Fill form when clicking a table row
     function fillForm(data) {
         document.getElementById('name').value = data.Nameoftablets || "";
         document.getElementById('ref').value = data.Reference_No || "";
@@ -185,32 +269,31 @@
         document.getElementById('dob').value = data.DOB || "";
         document.getElementById('address').value = data.patientaddress || "";
         document.getElementById('doctor').value = data.doctor || "";
-        
-        // NEW: Fill Disease Field
         document.getElementById('disease').value = data.Disease || "";
         
         currentRef = data.Reference_No;
+        console.log("Current Reference set to:", currentRef);
     }
 
     function deleteRecord() {
         const ref = document.getElementById('ref').value;
-        if(ref && confirm("Are you sure you want to delete " + ref + "?")) {
+        if(ref && confirm("⚠️ Are you sure you want to delete record: " + ref + "?")) {
             window.location.href = "/delete/" + ref;
         }
     }
 
-    // --- NEW: OCR FUNCTION ---
+    // 📸 Tesseract OCR Logic
     function scanPrescription() {
         const fileInput = document.getElementById('ocrFile');
         const status = document.getElementById('ocrStatus');
         const file = fileInput.files[0];
 
         if (!file) {
-            alert("Please select an image first.");
+            alert("Please select an image file first.");
             return;
         }
 
-        status.innerHTML = "⏳ Scanning image... please wait...";
+        status.innerHTML = "⏳ Processing image with AI Vision...";
         status.style.color = "blue";
 
         const formData = new FormData();
@@ -223,52 +306,48 @@
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                status.innerHTML = "❌ Error: " + data.error;
+                status.innerHTML = "❌ OCR Error: " + data.error;
                 status.style.color = "red";
             } else {
-                status.innerHTML = "✅ Scan Complete! Auto-fill successful.";
+                status.innerHTML = "✅ AI Scan Complete!";
                 status.style.color = "green";
                 
-                // Auto-fill Patient Name
-                if(data.pname) {
-                    document.getElementById('pname').value = data.pname;
-                }
-                
-                // Auto-fill Medicine (Dropdown)
-                if(data.name) {
-                    document.getElementById('name').value = data.name;
-                }
+                if(data.pname) document.getElementById('pname').value = data.pname;
+                if(data.name) document.getElementById('name').value = data.name;
 
-                alert(`Scanning Result:\n\nExtracted Name: ${data.pname}\nExtracted Tablet: ${data.name}`);
+                alert("AI Extracted Details:\nPatient: " + (data.pname || "Not Found") + "\nTablet: " + (data.name || "Not Found"));
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Fetch Error:', error);
             status.innerHTML = "❌ Connection Failed.";
-            status.style.color = "red";
         });
     }
-    // -------------------------
+
+    function toggleChat() {
+        const chatBox = document.getElementById('chat-popup');
+        chatBox.style.display = (chatBox.style.display === "none") ? "flex" : "none";
+    }
 
     function triggerQuickAction(actionType) {
         const inputField = document.getElementById('user-input');
         if (currentRef) {
-            if (actionType === 'show') inputField.value = "show " + currentRef;
-            if (actionType === 'recommend') inputField.value = "recommend " + currentRef;
-            if (actionType === 'supply') inputField.value = "supply " + currentRef;
+            inputField.value = actionType + " " + currentRef;
             sendMessage();
         } else {
-            alert("Please select a patient row from the table first!");
+            alert("❌ Please select a patient row from the table first!");
         }
     }
 
+    // 💬 Chat and Context Syncing
     function sendMessage() {
         const input = document.getElementById('user-input');
         const history = document.getElementById('chat-history');
         const text = input.value;
-        if(!text) return;
+        
+        if(!text.trim()) return;
 
-        history.innerHTML += `<div class="user-msg">You: ${text}</div>`;
+        history.innerHTML += `<div class="user-msg" style="text-align:right; color:#0d47a1; margin:10px 0; font-size:13px;"><b>You:</b> ${text}</div>`;
         input.value = "";
         history.scrollTop = history.scrollHeight;
 
@@ -279,12 +358,19 @@
         })
         .then(response => response.json())
         .then(data => {
-            history.innerHTML += `<div class="bot-msg">Bot: ${data.response}</div>`;
+            history.innerHTML += `<div class="bot-msg" style="text-align:left; color:#2e7d32; margin:10px 0; font-size:13px; border-left: 3px solid #2e7d32; padding-left: 5px;"><b>Bot:</b> ${data.response}</div>`;
+            
+            // Sync currentRef if Backend found a new patient via text
+            if (data.ref) {
+                currentRef = data.ref;
+                console.log("Context Synced to Ref:", currentRef);
+            }
+            
             history.scrollTop = history.scrollHeight;
         })
         .catch(error => {
-            console.error('Error:', error);
-            history.innerHTML += `<div class="bot-msg" style="color:red">Error: Connection failed.</div>`;
+            console.error('Chat Error:', error);
+            history.innerHTML += `<div class="bot-msg" style="color:red">Error: AI Connection lost.</div>`;
         });
     }
 </script>

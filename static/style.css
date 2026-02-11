@@ -1,37 +1,315 @@
-body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
-.header { text-align: center; background: white; padding: 10px; border-bottom: 3px solid red; margin-bottom: 20px; }
-.header h1 { color: red; margin: 0; }
+/* =========================================
+   1. GLOBAL & LAYOUT STYLES
+   ========================================= */
+body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    background: #f4f7f6; 
+    margin: 0; 
+    padding: 20px; 
+}
 
-.container { max-width: 1200px; margin: auto; }
+.header { 
+    text-align: center; 
+    background: white; 
+    padding: 15px; 
+    border-bottom: 4px solid #d32f2f; /* Red accent */
+    margin-bottom: 25px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
 
-/* Form Area */
-.form-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-.form-group { display: flex; flex-direction: column; }
-.form-group label { font-weight: bold; margin-bottom: 5px; }
-.form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+.header h1 { 
+    color: #d32f2f; 
+    margin: 0; 
+    font-size: 24px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
 
-/* Buttons */
-.btn-group { margin-top: 20px; text-align: center; }
-.btn { padding: 10px 20px; color: white; border: none; cursor: pointer; border-radius: 5px; margin: 0 5px; font-weight: bold; }
-.btn-add, .btn-update { background: green; }
-.btn-delete { background: red; }
-.btn-clear { background: orange; }
+.container { 
+    max-width: 1300px; 
+    margin: auto; 
+}
 
-/* Bottom Section */
-.bottom-section { display: flex; gap: 20px; margin-top: 20px; height: 400px; }
+/* =========================================
+   2. FORM AREA STYLES
+   ========================================= */
+.form-container { 
+    background: white; 
+    padding: 25px; 
+    border-radius: 8px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+    margin-bottom: 20px;
+}
 
-/* Chatbot */
-.chat-box { flex: 1; background: white; padding: 15px; display: flex; flex-direction: column; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-.chat-history { flex: 1; overflow-y: auto; background: #eee; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
-.chat-input { display: flex; gap: 5px; }
-.chat-input input { flex: 1; padding: 8px; }
-.user-msg { text-align: right; color: blue; margin: 5px 0; }
-.bot-msg { text-align: left; color: green; margin: 5px 0; font-weight: bold; }
+.form-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 15px; 
+}
 
-/* Table */
-.table-container { flex: 2; background: white; padding: 10px; overflow-y: auto; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-table { width: 100%; border-collapse: collapse; }
-th, td { padding: 10px; border: 1px solid #ddd; text-align: left; cursor: pointer; }
-th { background: #333; color: white; }
-tr:hover { background: #f1f1f1; }
+.form-group { 
+    display: flex; 
+    flex-direction: column; 
+}
+
+.form-group label { 
+    font-weight: 600; 
+    margin-bottom: 6px; 
+    color: #333;
+    font-size: 14px;
+}
+
+.form-group input, 
+.form-group select { 
+    padding: 10px; 
+    border: 1px solid #ddd; 
+    border-radius: 5px; 
+    font-size: 14px;
+    transition: border 0.3s;
+}
+
+.form-group input:focus, 
+.form-group select:focus {
+    border-color: #0d47a1;
+    outline: none;
+}
+
+/* =========================================
+   3. BUTTON STYLES
+   ========================================= */
+.btn-group { 
+    margin-top: 25px; 
+    text-align: center; 
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.btn { 
+    padding: 12px 25px; 
+    color: white; 
+    border: none; 
+    cursor: pointer; 
+    border-radius: 6px; 
+    margin: 0 8px; 
+    font-weight: bold; 
+    font-size: 14px;
+    transition: transform 0.1s, opacity 0.2s;
+}
+
+.btn:hover { opacity: 0.9; }
+.btn:active { transform: scale(0.98); }
+
+.btn-add    { background: #2e7d32; } /* Green */
+.btn-update { background: #0277bd; } /* Blue */
+.btn-delete { background: #c62828; } /* Red */
+.btn-clear  { background: #f57f17; } /* Orange */
+
+/* =========================================
+   4. TABLE STYLES
+   ========================================= */
+.bottom-section { 
+    display: flex; 
+    gap: 20px; 
+    margin-top: 20px; 
+    /* Removed fixed height so table can grow */
+}
+
+.table-container { 
+    background: white; 
+    padding: 15px; 
+    overflow-x: auto; 
+    border-radius: 8px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+    border: 1px solid #eee;
+    /* Force full width for better visibility */
+    width: 100%; 
+}
+
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    min-width: 1000px; /* Ensures scroll on small screens */
+}
+
+th, td { 
+    padding: 12px 15px; 
+    border-bottom: 1px solid #eee; 
+    text-align: left; 
+    font-size: 13px;
+    cursor: pointer; 
+}
+
+th { 
+    background: #37474f; 
+    color: white; 
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+tr:hover { 
+    background-color: #e3f2fd; 
+    transition: background 0.2s;
+}
+
+/* =========================================
+   5. FLOATING ROBOT & CHAT (NEW)
+   ========================================= */
+
+/* The Robot Icon (Bottom Right) */
+#robot-icon {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 80px;
+    height: 80px;
+    cursor: pointer;
+    z-index: 9999;
+    transition: transform 0.3s ease;
+    animation: float 3s ease-in-out infinite;
+}
+
+#robot-icon img {
+    width: 100%;
+    height: auto;
+    /* Adds a glow/shadow to make it pop */
+    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
+}
+
+#robot-icon:hover {
+    transform: scale(1.15); /* Grow slightly on hover */
+}
+
+/* Floating Animation Keyframes */
+@keyframes float {
+	0% { transform: translateY(0px); }
+	50% { transform: translateY(-12px); }
+	100% { transform: translateY(0px); }
+}
+
+/* The Chat Popup Window */
+.chat-box {
+    position: fixed;
+    bottom: 130px; /* Sits just above the robot */
+    right: 30px;
+    width: 360px;
+    height: 500px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #dcdcdc;
+    overflow: hidden;
+    /* "Hidden" class controls display via JS, but base state helps transition */
+}
+
+.chat-box.hidden {
+    display: none !important;
+}
+
+/* Chat Header */
+.chat-header {
+    background: linear-gradient(135deg, #0d47a1, #1976d2);
+    color: white;
+    padding: 15px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Chat History Area */
+.chat-history {
+    flex: 1;
+    overflow-y: auto;
+    background: #f9f9f9;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Messages */
+.user-msg { 
+    align-self: flex-end;
+    background: #e3f2fd;
+    color: #0d47a1;
+    padding: 8px 12px;
+    border-radius: 12px 12px 0 12px;
+    max-width: 80%;
+    font-size: 13px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.bot-msg { 
+    align-self: flex-start;
+    background: white;
+    color: #2e7d32;
+    padding: 8px 12px;
+    border-radius: 12px 12px 12px 0;
+    max-width: 85%;
+    font-size: 13px;
+    border: 1px solid #eee;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Quick Action Buttons inside Chat */
+.quick-actions {
+    padding: 10px;
+    background: white;
+    display: flex;
+    gap: 8px;
+    border-top: 1px solid #eee;
+}
+
+.btn-quick { 
+    flex: 1; 
+    padding: 6px; 
+    background: #f5f5f5; 
+    border: 1px solid #ddd; 
+    border-radius: 15px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    font-size: 11px; 
+    color: #555;
+    transition: background 0.2s;
+}
+
+.btn-quick:hover {
+    background: #e0e0e0;
+    color: #000;
+}
+
+/* Chat Input Area */
+.chat-input { 
+    display: flex; 
+    gap: 8px; 
+    padding: 10px; 
+    background: white; 
+    border-top: 1px solid #eee;
+}
+
+.chat-input input { 
+    flex: 1; 
+    padding: 10px; 
+    border: 1px solid #ddd; 
+    border-radius: 20px; 
+    outline: none;
+}
+
+.chat-input button {
+    padding: 8px 16px;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.chat-input button:hover {
+    background: #1565c0;
+}

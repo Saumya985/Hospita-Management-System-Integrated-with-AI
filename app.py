@@ -12,9 +12,7 @@ import google.generativeai as genai  # NEW: For Interactive Chat
 
 app = Flask(__name__)
 
-# ==========================================
 # 1. AI CONFIGURATION
-# ==========================================
 
 # --- A. GEMINI API SETUP ---
 GEMINI_API_KEY = "AIzaSyCc8ifiQONm6TXMIPaBzd9EOl1U9_Swm34"
@@ -57,6 +55,7 @@ def get_db_connection():
 
 def calculate_age(dob_str):
     try:
+        # Support multiple date formats for reliability
         for fmt in ["%d-%m-%Y", "%d-%m-%y", "%d/%m/%Y", "%Y-%m-%d"]:
             try:
                 birth_date = datetime.datetime.strptime(str(dob_str), fmt).date()
@@ -85,15 +84,27 @@ def get_health_advice(row):
     
     if exp_date_obj:
         days_left = (exp_date_obj - datetime.date.today()).days
-        if days_left < 0: advice_list.append("🔴 <b>CRITICAL:</b> Medicine EXPIRED! Do not consume.")
-        elif days_left < 30: advice_list.append(f"⚠️ <b>Expiry Warning:</b> Expires in {days_left} days.")
+        if days_left < 0: 
+            advice_list.append("🔴 <b>CRITICAL:</b> Medicine EXPIRED! Do not consume.")
+        elif days_left < 30: 
+            advice_list.append(f"⚠️ <b>Expiry Warning:</b> Expires in {days_left} days.")
 
-    if "corona" in tablet or "vaccine" in tablet: advice_list.append("💉 <b>Vaccine Care:</b> Mild fever is normal. Rest for 2 days.")
-    elif "acetaminophen" in tablet: advice_list.append("💊 <b>Pain/Fever:</b> Take after food. Do not exceed dose.")
-    elif "adderall" in tablet: advice_list.append("🧠 <b>Focus:</b> Take early to avoid insomnia.")
-    elif "amlodipine" in tablet: advice_list.append("❤️ <b>BP Meds:</b> Avoid sudden standing.")
-    else: advice_list.append("ℹ️ <b>General:</b> Complete the full course.")
+    if "corona" in tablet or "vaccine" in tablet: 
+        advice_list.append("💉 <b>Vaccine Care:</b> Mild fever is normal. Rest for 2 days.")
+    elif "acetaminophen" in tablet: 
+        advice_list.append("💊 <b>Pain/Fever:</b> Take after food. Do not exceed dose.")
+    elif "adderall" in tablet: 
+        advice_list.append("🧠 <b>Focus:</b> Take early to avoid insomnia.")
+    elif "amlodipine" in tablet: 
+        advice_list.append("❤️ <b>BP Meds:</b> Avoid sudden standing.")
+    elif "ativan" in tablet: 
+        advice_list.append("💤 <b>Anxiety/Sleep:</b> May cause drowsiness. Do not drive.")
+    elif "paracetamol" in tablet or "dollo" in tablet: 
+        advice_list.append("🌡️ <b>Fever:</b> Monitor temperature. Gap of 6 hours between doses.")
+    else: 
+        advice_list.append("ℹ️ <b>General:</b> Complete the full course.")
 
+# Age-Specific Safety
     age = calculate_age(dob)
     if age is None: age = 30 
     if age > 60: advice_list.append(f"👴 <b>Senior Care:</b> Drink water frequently, watch for dizziness.")
@@ -119,7 +130,8 @@ def get_health_advice(row):
         except Exception as e:
             print(f"AI Prediction Error: {e}")
 
-    if storage and "fridge" in storage.lower(): advice_list.append("❄️ <b>Storage:</b> Keep Refrigerated.")
+    if storage and "fridge" in storage.lower(): 
+        advice_list.append("❄️ <b>Storage:</b> Keep Refrigerated.")
     
     # Specific Advice based on Disease field
     if disease:
@@ -130,7 +142,7 @@ def get_health_advice(row):
 def parse_intent(text, context_ref=None):
     t = text.lower().strip()
     
-    # --- 1. SMART ID EXTRACTION ---
+    # --- 1. SMART ID EXTRACTION using Regex---
     m = re.search(r"(ref[-_0-9a-zA-Z]+|\bref\s*\d+|\bpt[-_0-9a-zA-Z]+|\b[a-zA-Z]{2}\d{2,}|\b\d{3,})", t)
     
     ref = None
@@ -278,10 +290,31 @@ def chat():
 
                 elif intent == "supply":
                     try:
-                        days = int(float(row['Numbersoftablets']) / float(row['dailydose']))
-                        return jsonify({"response": f"Supply: {days} days remaining for {row['patientname']}."})
+                        total_qty = float(row['Numbersoftablets'])
+                        daily_dose = float(row['dailydose'])
+                        issue_date_str = row['issuedate']
+                        
+                        total_days_supply = int(total_qty / daily_dose)
+                        
+                        issue_date = None
+                        for fmt in ["%d-%m-%Y", "%d-%m-%y", "%d/%m/%Y", "%Y-%m-%d"]:
+                            try:
+                                issue_date = datetime.datetime.strptime(str(issue_date_str), fmt).date()
+                                break
+                            except: continue
+                            
+                        if issue_date:
+                            days_passed = (datetime.date.today() - issue_date).days
+                            remaining_days = total_days_supply - days_passed
+                            
+                            if remaining_days <= 0:
+                                return jsonify({"response": f"⚠️ Medicine supply for {row['patientname']} has <b>finished</b> (Issued {issue_date_str}).", "ref": row['Reference_No']})
+                            else:
+                                return jsonify({"response": f"📅 {row['patientname']} has approx <b>{remaining_days} days</b> of medicine left.", "ref": row['Reference_No']})
+                        else:
+                            return jsonify({"response": f"Total supply: {total_days_supply} days (Issue date unknown).", "ref": row['Reference_No']})
                     except: 
-                        return jsonify({"response": "Cannot calculate supply (check dose in records)."})
+                        return jsonify({"response": "Cannot calculate supply (check dose/qty).", "ref": row['Reference_No']})
 
         # 2. ASK GEMINI AI
         patient_context = "No specific patient selected from the table."
@@ -294,31 +327,12 @@ def chat():
             if row:
                 # UPDATED: Added Disease to AI Context
                 patient_context = (f"Patient Name: {row['patientname']}, Age: {calculate_age(row['DOB'])}, "
-                                   f"Disease/Condition: {row.get('Disease', 'Unknown')}, "
-                                   f"Medicine: {row['Nameoftablets']}, Dose: {row['dose']}, "
-                                   f"RefID: {row['Reference_No']}, "
-                                   f"Storage Notes: {row.get('storage', 'None')}")
+                                   f"Condition: {row.get('Disease', 'Unknown')}, Medicine: {row['Nameoftablets']}, "
+                                   f"Dose: {row['dose']}, RefID: {row['Reference_No']}")
 
-        prompt = f"""
-        You are a smart medical assistant for a Hospital Management System.
-        
-        CONTEXT DATA (The user has selected this patient row):
-        {patient_context}
-
-        USER QUESTION:
-        "{user_text}"
-
-        INSTRUCTIONS:
-        - Answer the user's question naturally and politely.
-        - If the context contains patient data (especially disease/condition), use it to personalize the answer.
-        - If the question is about general health (e.g., "headache"), give general advice.
-        - Keep answers short (under 50 words) and use simple language.
-        - Do not give dangerous medical advice; suggest seeing a doctor for serious issues.
-        """
-
+        prompt = f"Context: {patient_context}\nUser: {user_text}\nAnswer briefly as a medical assistant."
         ai_response = model.generate_content(prompt)
-        bot_reply = ai_response.text
-        bot_reply = bot_reply.replace("\n", "<br>")
+        bot_reply = ai_response.text.replace("\n", "<br>")
         
         return jsonify({"response": f"🤖 <b>AI:</b> {bot_reply}"})
 
@@ -332,34 +346,25 @@ def scan_prescription():
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No file selected"}), 400
-
+    
     try:
         img = Image.open(file)
         custom_config = r'--oem 3 --psm 6'
         extracted_text = pytesseract.image_to_string(img, config=custom_config)
         
         data = {"pname": "", "name": "", "raw_text": extracted_text}
-        lines = extracted_text.split('\n')
         
-        for line in lines:
-            lower_line = line.lower().strip()
-            if "name" in lower_line or "patient" in lower_line:
-                cleaned_name = re.sub(r"(patient|name|:|[^a-zA-Z\s])", "", lower_line, flags=re.IGNORECASE).strip()
-                if len(cleaned_name) > 2: 
-                    data["pname"] = cleaned_name.title()
-            
-            if "mg" in lower_line:
-                data["name"] = line.strip()
-            
-            if any(med in lower_line for med in ["paracetamol", "aspirin", "tablet", "capsule", "vaccine", "dollo", "ativan"]):
+        for line in extracted_text.split('\n'):
+            l = line.lower().strip()
+            if "name" in l or "patient" in l:
+                cleaned = re.sub(r"(patient|name|:|[^a-zA-Z\s])", "", l, flags=re.IGNORECASE).strip()
+                if len(cleaned) > 2: data["pname"] = cleaned.title()
+            if any(m in l for m in ["mg", "paracetamol", "aspirin", "tablet", "capsule", "vaccine", "ativan", "dollo"]):
                 data["name"] = line.strip()
         
         return jsonify(data)
 
     except Exception as e:
-        print(f"OCR Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
