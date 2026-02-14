@@ -15,8 +15,8 @@ app = Flask(__name__)
 # 1. AI CONFIGURATION
 
 # --- A. GEMINI API SETUP ---
-GEMINI_API_KEY = "AIzaSyCc8ifiQONm6TXMIPaBzd9EOl1U9_Swm34"
-genai.configure(api_key=GEMINI_API_KEY)
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-flash-latest')
 
 # --- B. OCR / VISION SETUP ---

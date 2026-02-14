@@ -15,6 +15,12 @@ X_train = [
     [20, 1, 0, 0], [40, 1, 1, 0], # Standard cases = Low Risk (0)
     [50, 5, 0, 1], [85, 1, 0, 0], # High dose or Very Old = High Risk (1)
     [10, 1, 1, 0], [70, 4, 0, 1]  # Child antibiotic = Low(0), Senior High Painkiller = High(1)
+    [45, 1, 0, 0], [55, 2, 0, 0], # Middle-aged, standard meds = Low Risk (0)
+    [12, 5, 0, 0], [15, 6, 1, 0], # Kids/Teens, very high dose = High Risk (1)
+    [35, 1, 1, 1], [40, 2, 1, 1], # Mixing Antibiotics + Painkillers = High Risk (1)
+    [90, 1, 0, 1], [95, 2, 1, 0], # Extreme old age, even low dose = High Risk (1)
+    [28, 10, 0, 0],               # Young person, massive overdose = High Risk (1)
+    [32, 1, 0, 0]                 # Healthy adult, low dose = Low Risk (0)
 ]
 
 # The answers (0 = Safe, 1 = Warning Needed)
