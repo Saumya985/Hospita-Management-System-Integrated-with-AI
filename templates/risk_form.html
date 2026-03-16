@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Risk Prediction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            padding: 40px;
+        }
+
+        .container {
+            width: 400px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .back-link {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .back-link a {
+            text-decoration: none;
+            color: #007BFF;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>AI Risk Prediction</h2>
+
+    <form method="POST" action="/predict">
+        <label>Age</label>
+        <input type="number" name="age" required>
+
+        <label>Daily Dose</label>
+        <input type="number" name="dose_val" required>
+
+        <label>Tablet Name</label>
+        <input type="text" name="tablet" required>
+
+        <button type="submit">Predict Risk</button>
+    </form>
+
+    <div class="back-link">
+        <a href="/">← Back to Dashboard</a>
+    </div>
+</div>
+
+</body>
+</html>

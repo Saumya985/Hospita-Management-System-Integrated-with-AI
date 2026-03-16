@@ -1,6 +1,7 @@
 # train_model.py
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+
 import joblib
 
 print("Step 1: Creating training data...")
@@ -14,7 +15,7 @@ X_train = [
     [65, 3, 1, 0], [75, 4, 1, 0], # Senior, high dose antibiotic = High Risk (1)
     [20, 1, 0, 0], [40, 1, 1, 0], # Standard cases = Low Risk (0)
     [50, 5, 0, 1], [85, 1, 0, 0], # High dose or Very Old = High Risk (1)
-    [10, 1, 1, 0], [70, 4, 0, 1]  # Child antibiotic = Low(0), Senior High Painkiller = High(1)
+    [10, 1, 1, 0], [70, 4, 0, 1], # Child antibiotic = Low(0), Senior High Painkiller = High(1)
     [45, 1, 0, 0], [55, 2, 0, 0], # Middle-aged, standard meds = Low Risk (0)
     [12, 5, 0, 0], [15, 6, 1, 0], # Kids/Teens, very high dose = High Risk (1)
     [35, 1, 1, 1], [40, 2, 1, 1], # Mixing Antibiotics + Painkillers = High Risk (1)
@@ -24,11 +25,23 @@ X_train = [
 ]
 
 # The answers (0 = Safe, 1 = Warning Needed)
-y_train = [0, 0, 1, 1, 0, 0, 1, 1, 0, 1]
+y_train = [
+    0, 0,  # Young, low dose
+    1, 1,  # Senior high dose antibiotic
+    0, 0,  # Standard cases
+    1, 1,  # High dose / very old
+    0, 1,  # Child antibiotic (low), Senior high painkiller (high)
+    0, 0,  # Middle-aged standard meds
+    1, 1,  # Kids/teens very high dose
+    1, 1,  # Antibiotic + painkiller mix
+    1, 1,  # Extreme old age
+    1,     # Massive overdose young
+    0      # Healthy adult low dose
+]
 
 print("Step 2: Training the AI model...")
 # Initialize the Decision Tree Classifier
-clf = DecisionTreeClassifier()
+clf = LogisticRegression(max_iter=1000)
 
 # Train the model
 clf.fit(X_train, y_train)

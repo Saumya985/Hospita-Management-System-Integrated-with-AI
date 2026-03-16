@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Risk Result</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            padding: 40px;
+        }
+
+        .container {
+            width: 450px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .high-risk {
+            color: red;
+            font-weight: bold;
+        }
+
+        .low-risk {
+            color: green;
+            font-weight: bold;
+        }
+
+        .probability {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .alert {
+            margin-top: 15px;
+            color: darkred;
+            font-weight: bold;
+        }
+
+        .button {
+            margin-top: 20px;
+        }
+
+        .button a {
+            padding: 10px 15px;
+            background-color: #007BFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .button a:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Risk Prediction Result</h2>
+
+    {% if risk == "High Risk" %}
+        <p class="high-risk">Risk Level: {{ risk }}</p>
+    {% else %}
+        <p class="low-risk">Risk Level: {{ risk }}</p>
+    {% endif %}
+
+    <p class="probability">
+        Risk Probability: {{ probability }}%
+    </p>
+
+    {% if probability > 85 %}
+        <p class="alert">
+            ⚠ Critical Risk Detected — Immediate Medical Attention Required
+        </p>
+    {% endif %}
+
+    <div class="button">
+        <a href="/predict">Predict Again</a>
+    </div>
+
+    <div class="button">
+        <a href="/">Back to Dashboard</a>
+    </div>
+</div>
+
+</body>
+</html>

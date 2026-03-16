@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Doctor Login</title>
+<style>
+body{font-family:Arial;background:#f2f2f2}
+.box{width:400px;margin:120px auto;background:white;padding:30px;border-radius:8px; text-align: cente;}
+input{width:100%;padding:10px;margin-top:10px}
+button
+{
+    background-color: #28a745; 
+    width: 100%; 
+    margin-top: 10px; 
+    border:none;
+    border-radius:4px;
+    padding: 10px;
+}
+h2{ text-align: center;}
+</style>
+</head>
+<body>
+
+<div class="box">
+<h2>Doctor Login</h2>
+
+<form method="POST" action="/doctor_login">
+
+<label>Username</label>
+<input type="text" name="username" required>
+
+<label>Password</label>
+<input type="password" name="password" required>
+
+<button type="submit">Login</button>
+
+</form>
+
+</div>
+
+</body>
+</html>

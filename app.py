@@ -1,148 +1,117 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
 from db_config import db_config
 import datetime
 import re
-import joblib           # For AI Risk Model
-import numpy as np      # For Data Handling
-import os               # For File Paths
-import pytesseract      # For OCR (Vision)
-from PIL import Image   # For Image Processing
-import google.generativeai as genai  # NEW: For Interactive Chat
+import os
+import pytesseract
+from PIL import Image
+import google.generativeai as genai
+from services.risk_service import predict_risk
+import random
+import string
 
 app = Flask(__name__)
+app.secret_key = "super_secure_key"
 
+# ==========================================
 # 1. AI CONFIGURATION
-
-# --- A. GEMINI API SETUP ---
+# ==========================================
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-flash-latest')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
-# --- B. OCR / VISION SETUP ---
-# Update this path if Tesseract is installed elsewhere on your system
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
-# --- C. RISK MODEL SETUP ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, 'risk_model.pkl')
-
-try:
-    risk_model = joblib.load(MODEL_PATH)
-    print(f"✅ SUCCESS: AI Risk Model loaded from {MODEL_PATH}")
-except Exception as e:
-    risk_model = None
-    print(f"⚠️ WARNING: Could not load AI model. Error: {e}")
 
 # ==========================================
 # 2. HELPER FUNCTIONS
 # ==========================================
 
 DOCTORS_NAMES = [
-    "Dr. A. Smith (Cardiology)", "Dr. B. Jones (Neurology)", "Dr. C. Williams (Orthopedics)",
-    "Dr. D. Brown (Pediatrics)", "Dr. E. Davis (General Surgeon)", "Dr. F. Miller (ENT)",
-    "Dr. G. Wilson (Dermatology)", "Dr. H. Moore (Gynecology)", "Dr. I. Taylor (Oncology)",
-    "Dr. J. Anderson (Psychiatry)"
+    "Dr. A. Smith (Cardiology)", "Dr. B. Jones (Neurology)",
+    "Dr. C. Williams (Orthopedics)", "Dr. D. Brown (Pediatrics)",
+    "Dr. E. Davis (General Surgeon)", "Dr. F. Miller (ENT)",
+    "Dr. G. Wilson (Dermatology)", "Dr. H. Moore (Gynecology)",
+    "Dr. I. Taylor (Oncology)", "Dr. J. Anderson (Psychiatry)"
 ]
+
+def generate_reference():
+    while True:
+        ref = "ref" + str(random.randint(100, 9999))
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute("SELECT * FROM users WHERE Reference_No=%s", (ref,))
+        exists = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+        if not exists:
+            return ref
 
 def get_db_connection():
     try:
-        conn = mysql.connector.connect(**db_config)
-        return conn
+        return mysql.connector.connect(**db_config)
     except mysql.connector.Error as err:
-        print(f"Error connecting to DB: {err}")
+        print(f"DB Connection Error: {err}")
         return None
 
 def calculate_age(dob_str):
-    try:
-        # Support multiple date formats for reliability
-        for fmt in ["%d-%m-%Y", "%d-%m-%y", "%d/%m/%Y", "%Y-%m-%d"]:
-            try:
-                birth_date = datetime.datetime.strptime(str(dob_str), fmt).date()
-                today = datetime.date.today()
-                return today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-            except: continue
-        return None
-    except: return None
+    for fmt in ["%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y"]:
+        try:
+            birth_date = datetime.datetime.strptime(str(dob_str), fmt).date()
+            today = datetime.date.today()
+            return today.year - birth_date.year - (
+                (today.month, today.day) < (birth_date.month, birth_date.day)
+            )
+        except:
+            continue
+    return 30  # fallback
+
 
 def get_health_advice(row):
     advice_list = []
     tablet = row.get('Nameoftablets', '').lower()
-    daily_dose_str = row.get('dailydose', '0')
+    daily_dose_str = row.get('dailydose', '1')
     dob = row.get('DOB', '')
-    storage = row.get('storage', '')
-    expdate = row.get('expdate', '')
-    disease = row.get('Disease', '')  # Get disease info for advice
+    disease = row.get('Disease', '')
 
-    # --- PART 1: EXISTING RULES ---
-    exp_date_obj = None
-    for fmt in ["%d-%m-%Y", "%d-%m-%y", "%d/%m/%Y", "%Y-%m-%d"]:
-        try:
-            exp_date_obj = datetime.datetime.strptime(str(expdate), fmt).date()
-            break
-        except: pass
-    
-    if exp_date_obj:
-        days_left = (exp_date_obj - datetime.date.today()).days
-        if days_left < 0: 
-            advice_list.append("🔴 <b>CRITICAL:</b> Medicine EXPIRED! Do not consume.")
-        elif days_left < 30: 
-            advice_list.append(f"⚠️ <b>Expiry Warning:</b> Expires in {days_left} days.")
+    # Basic rule-based advice
+    if "paracetamol" in tablet or "dollo" in tablet:
+        advice_list.append("🌡️ <b>Fever:</b> Maintain 6-hour gaps between doses.")
+    elif "amlodipine" in tablet:
+        advice_list.append("❤️ <b>Blood Pressure:</b> Take at the same time every day.")
 
-    if "corona" in tablet or "vaccine" in tablet: 
-        advice_list.append("💉 <b>Vaccine Care:</b> Mild fever is normal. Rest for 2 days.")
-    elif "acetaminophen" in tablet: 
-        advice_list.append("💊 <b>Pain/Fever:</b> Take after food. Do not exceed dose.")
-    elif "adderall" in tablet: 
-        advice_list.append("🧠 <b>Focus:</b> Take early to avoid insomnia.")
-    elif "amlodipine" in tablet: 
-        advice_list.append("❤️ <b>BP Meds:</b> Avoid sudden standing.")
-    elif "ativan" in tablet: 
-        advice_list.append("💤 <b>Anxiety/Sleep:</b> May cause drowsiness. Do not drive.")
-    elif "paracetamol" in tablet or "dollo" in tablet: 
-        advice_list.append("🌡️ <b>Fever:</b> Monitor temperature. Gap of 6 hours between doses.")
-    else: 
-        advice_list.append("ℹ️ <b>General:</b> Complete the full course.")
+    # ===== AI Risk Model Prediction (FIXED) =====
+    try:
+        age = calculate_age(dob)
+        dose_match = re.search(r'\d+', str(daily_dose_str))
+        dose_val = int(dose_match.group()) if dose_match else 1
 
-# Age-Specific Safety
-    age = calculate_age(dob)
-    if age is None: age = 30 
-    if age > 60: advice_list.append(f"👴 <b>Senior Care:</b> Drink water frequently, watch for dizziness.")
-    if age < 12: advice_list.append(f"👶 <b>Child Care:</b> Ensure dosage is strictly by weight.")
+        is_anti = 1 if any(x in tablet for x in ['cillin', 'mycin']) else 0
+        is_pain = 1 if any(x in tablet for x in ['pain', 'dol', 'fenac']) else 0
 
-    # --- PART 2: AI RISK PREDICTION ---
-    if risk_model:
-        try:
-            try:
-                dose_val = int(re.search(r'\d+', str(daily_dose_str)).group())
-            except:
-                dose_val = 1
-            
-            is_anti = 1 if any(x in tablet for x in ['cillin', 'mycin', 'oxacin', 'corona']) else 0
-            is_pain = 1 if any(x in tablet for x in ['pain', 'acetaminophen', 'dol', 'fenac']) else 0
-            
-            prediction = risk_model.predict([[age, dose_val, is_anti, is_pain]])
-            
-            if prediction[0] == 1:
-                advice_list.append("🤖 <b>AI RISK ALERT:</b> High-risk dosage pattern detected for this age group. Verify with doctor.")
-            else:
-                advice_list.append("🤖 <b>AI Analysis:</b> Dosage looks standard for this patient profile.")
-        except Exception as e:
-            print(f"AI Prediction Error: {e}")
+        prediction, probability = predict_risk(age, dose_val, is_anti, is_pain)
 
-    if storage and "fridge" in storage.lower(): 
-        advice_list.append("❄️ <b>Storage:</b> Keep Refrigerated.")
-    
-    # Specific Advice based on Disease field
+        if prediction == 1:
+            advice_list.append(
+                f"🤖 <b>AI Alert:</b> High-risk dosage pattern detected "
+                f"(Risk: {round(probability * 100, 2)}%)."
+            )
+
+    except Exception as e:
+        print("Risk model error:", e)
+
     if disease:
-        advice_list.append(f"🩺 <b>Condition Note:</b> Managing {disease}.")
+        advice_list.append(f"🩺 <b>Note:</b> Monitoring for {disease}.")
 
     return advice_list
 
 def parse_intent(text, context_ref=None):
     t = text.lower().strip()
-    
-    # --- 1. SMART ID EXTRACTION using Regex---
     m = re.search(r"(ref[-_0-9a-zA-Z]+|\bref\s*\d+|\bpt[-_0-9a-zA-Z]+|\b[a-zA-Z]{2}\d{2,}|\b\d{3,})", t)
     
     ref = None
@@ -164,40 +133,170 @@ def parse_intent(text, context_ref=None):
     
     if ref and not any(k in t for k in ["hi", "hello", "help", "thanks"]): return "show_patient", ref
     
+
     return "general_chat", ref
 
+
+
+
 # ==========================================
-# 3. APP ROUTES
+# AUTHENTICATION ROUTES
+# ==========================================
+
+@app.route('/register', methods=['GET','POST'])
+def register():
+
+    if request.method == 'POST':
+
+        ref_no = request.form['Reference_No']
+        #name= request.form['username']
+        password = generate_password_hash(request.form['password'])
+        role= request.form['role']
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            # check if username already exists
+            #cur.execute("SELECT * FROM users WHERE Reference_No=%s",(ref_no,))
+            #cur.execute("SELECT * FROM users WHERE username=%s",(name,))
+            #existing = cur.fetchone()
+
+            #if existing:
+            #    return "Reference number already exists"
+
+            cur.execute("INSERT INTO users(Reference_No,password,role) VALUES(%s,%s,%s)",(ref_no,password,'patient'))
+            #cur.execute("INSERT INTO users(username,password,role) VALUES(%s,%s,%s)",(name,password,'doctor'))
+
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            return f"Database error: {str(e)}"
+
+        finally:
+            cur.close()
+            conn.close()
+
+        return redirect('/login')
+    
+    # GET request → generate reference
+    ref = generate_reference()
+
+    return render_template("register.html", ref_no=ref)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_page():
+    return render_template("select_role.html")
+
+@app.route('/choose_role', methods=['POST'])
+def choose_role():
+
+    role = request.form['role']
+
+    if role == "doctor":
+        return render_template("doctor_login.html")
+
+    else:
+        return render_template("patient_login.html")
+
+
+@app.route('/doctor_login', methods=['POST'])
+def doctor_login():
+    
+    username = request.form['username']
+    password = request.form['password']
+
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute("SELECT * FROM users WHERE username=%s AND role='doctor'", (username,))
+    user = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if user and check_password_hash(user['password'], password):
+
+        session['user'] = username
+        session['role'] = 'doctor'
+
+        return redirect('/')
+
+    return "Invalid doctor login"
+
+@app.route('/patient_login', methods=['POST'])
+def patient_login():
+
+    ref_no = request.form['ref_no']
+    password = request.form['password']
+
+    conn = get_db_connection()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute("SELECT * FROM users WHERE Reference_No=%s AND role='patient'", (ref_no,))
+    user = cur.fetchone()
+
+    if user and check_password_hash(user['password'], password):
+
+        session['user'] = ref_no
+        session['role'] = 'patient'
+        session['patient_ref'] = ref_no
+
+        cur.close()
+        conn.close()
+
+        return redirect('/')
+
+    cur.close()
+    conn.close()
+
+    return "Invalid patient login"
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/login')
+
+
+# ==========================================
+# 3. ROUTES
 # ==========================================
 
 @app.route('/')
 def index():
-    conn = get_db_connection()
-    if conn:
-        cursor = conn.cursor(dictionary=True)
+     if 'user' not in session:
+            return redirect('/login')
+     
+     conn = get_db_connection()
+     if not conn:
+        return "Database connection failed."
+     
+     conn = get_db_connection()
+     cursor = conn.cursor(dictionary=True)
+     
+     if session['role'] == 'patient':
+        ref = session.get('patient_ref')
+        cursor.execute(
+            "SELECT * FROM hospital WHERE Reference_No=%s",
+            (ref,)
+        )
+        patient = cursor.fetchone()
+        conn.close()
+
+        return render_template("patient_dashboard.html", patient=patient)
+
+     else:  # doctor
         cursor.execute("SELECT * FROM hospital")
         patients = cursor.fetchall()
         conn.close()
 
-        assigned_doctors = set()
-        for p in patients:
-            if p.get('doctor'):
-                doc_name_only = p['doctor'].split(' - ')[0]
-                assigned_doctors.add(doc_name_only)
-        
-        doctors_status_list = []
-        for doc_name in DOCTORS_NAMES:
-            if doc_name in assigned_doctors:
-                doctors_status_list.append(f"{doc_name} - Busy")
-            else:
-                doctors_status_list.append(f"{doc_name} - Available")
-
-        return render_template('index.html', patients=patients, doctors=doctors_status_list)
-    else:
-        return "Database Connection Failed."
-
+        return render_template("index.html", patients=patients, doctors=DOCTORS_NAMES)
 @app.route('/add', methods=['POST'])
 def add_patient():
+    if session.get('role') != "doctor":
+        return "Unauthorized"
+
     data = request.form
     try:
         conn = get_db_connection()
@@ -220,8 +319,11 @@ def add_patient():
 
 @app.route('/update', methods=['POST'])
 def update_patient():
-    data = request.form
-    try:
+     if session.get('role') != "doctor":
+            return "Unauthorized"
+
+     data = request.form
+     try:
         conn = get_db_connection()
         cur = conn.cursor()
         # UPDATED SQL: Added 'Disease=%s'
@@ -237,12 +339,41 @@ def update_patient():
         cur.execute(sql, val)
         conn.commit()
         conn.close()
-    except Exception as e:
+     except Exception as e:
         print("Error updating:", e)
-    return redirect(url_for('index'))
+     return redirect(url_for('index'))
+
+@app.route('/predict', methods=['GET', 'POST'])
+def predict():
+    if request.method == 'POST':
+        try:
+            age = int(request.form['age'])
+            dose_val = int(request.form['dose_val'])
+            tablet = request.form['tablet'].lower()
+
+            is_anti = 1 if any(x in tablet for x in ['cillin', 'mycin']) else 0
+            is_pain = 1 if any(x in tablet for x in ['pain', 'dol', 'fenac']) else 0
+
+            prediction, probability = predict_risk(age, dose_val, is_anti, is_pain)
+
+            risk_label = "High Risk" if prediction == 1 else "Low Risk"
+
+            return render_template(
+                'risk_result.html',
+                risk=risk_label,
+                probability=round(probability * 100, 2)
+            )
+
+        except Exception as e:
+            return f"Prediction Error: {str(e)}"
+
+    return render_template('risk_form.html')
 
 @app.route('/delete/<ref>', methods=['GET'])
 def delete_patient(ref):
+    if session.get('role') != "doctor":
+        return "Unauthorized"
+
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -253,119 +384,201 @@ def delete_patient(ref):
         print("Error deleting:", e)
     return redirect(url_for('index'))
 
-# --- UPDATED SMART CHAT ROUTE (POWERED BY GOOGLE GEMINI) ---
+
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
         req = request.json
         user_text = req.get('message', '')
         context_ref = req.get('context_ref', '')
-        
+
         intent, ref = parse_intent(user_text, context_ref)
 
         if intent in ["show_patient", "supply", "recommend"] and ref:
+
+            # Authorization check
+            if session.get('role') == 'patient':
+                allowed_ref = session.get('patient_ref')
+
+                if ref != allowed_ref:
+                    return jsonify({
+                        "response": "❌ You are not authorized to access other patient records."
+                    })
+
+            # Open DB connection ONCE
             conn = get_db_connection()
-            cur = conn.cursor(dictionary=True) 
+            cur = conn.cursor(dictionary=True)
+
             cur.execute("SELECT * FROM hospital WHERE Reference_No=%s", (ref,))
             row = cur.fetchone()
+
+            cur.close()
             conn.close()
 
             if row:
+
                 if intent == "show_patient":
                     assigned_doc = row.get('doctor', 'Not Assigned')
-                    # UPDATED: Added Disease to display
-                    details = (f"<b>👤 Patient Profile:</b><br>Name: {row['patientname']} (DOB: {row['DOB']})<br>"
-                               f"Ref: {row['Reference_No']} | NHS: {row['nhsnumber']}<br>"
-                               f"<b>🩺 Condition:</b> {row.get('Disease', 'Not Specified')}<br>"
-                               f"Address: {row['patientaddress']}<br>"
-                               f"<b>👨‍⚕️ Assigned Doctor:</b> {assigned_doc}<br>----------------<br>"
-                               f"<b>💊 Prescription:</b><br>Tablet: {row['Nameoftablets']} (Qty: {row['Numbersoftablets']})<br>"
-                               f"Dose: {row['dose']} | Daily: {row['dailydose']}<br>Issued: {row['issuedate']} | Exp: {row['expdate']}")
+
+                    details = (
+                        f"<b>👤 Patient Profile:</b><br>"
+                        f"Name: {row['patientname']} (DOB: {row['DOB']})<br>"
+                        f"Ref: {row['Reference_No']} | NHS: {row['nhsnumber']}<br>"
+                        f"<b>🩺 Condition:</b> {row.get('Disease', 'Not Specified')}<br>"
+                        f"Address: {row['patientaddress']}<br>"
+                        f"<b>👨‍⚕️ Assigned Doctor:</b> {assigned_doc}<br>----------------<br>"
+                        f"<b>💊 Prescription:</b><br>"
+                        f"Tablet: {row['Nameoftablets']} (Qty: {row['Numbersoftablets']})<br>"
+                        f"Dose: {row['dose']} | Daily: {row['dailydose']}<br>"
+                        f"Issued: {row['issuedate']} | Exp: {row['expdate']}"
+                    )
+
                     tips_html = "<br>".join(get_health_advice(row))
-                    return jsonify({"response": details + f"<br><br><b>💡 Health & Safety Advice:</b><br>{tips_html}"})
-                
+
+                    return jsonify({
+                        "response": details + f"<br><br><b>💡 Health & Safety Advice:</b><br>{tips_html}"
+                    })
+
                 elif intent == "recommend":
                     tips_html = "<br>".join(get_health_advice(row))
-                    return jsonify({"response": f"<b>💡 Advice for {row['patientname']}:</b><br>{tips_html}"})
+                    return jsonify({
+                        "response": f"<b>💡 Advice for {row['patientname']}:</b><br>{tips_html}"
+                    })
 
                 elif intent == "supply":
                     try:
                         total_qty = float(row['Numbersoftablets'])
                         daily_dose = float(row['dailydose'])
                         issue_date_str = row['issuedate']
-                        
+
                         total_days_supply = int(total_qty / daily_dose)
-                        
+
                         issue_date = None
                         for fmt in ["%d-%m-%Y", "%d-%m-%y", "%d/%m/%Y", "%Y-%m-%d"]:
                             try:
                                 issue_date = datetime.datetime.strptime(str(issue_date_str), fmt).date()
                                 break
-                            except: continue
-                            
+                            except:
+                                continue
+
                         if issue_date:
                             days_passed = (datetime.date.today() - issue_date).days
                             remaining_days = total_days_supply - days_passed
-                            
-                            if remaining_days <= 0:
-                                return jsonify({"response": f"⚠️ Medicine supply for {row['patientname']} has <b>finished</b> (Issued {issue_date_str}).", "ref": row['Reference_No']})
-                            else:
-                                return jsonify({"response": f"📅 {row['patientname']} has approx <b>{remaining_days} days</b> of medicine left.", "ref": row['Reference_No']})
-                        else:
-                            return jsonify({"response": f"Total supply: {total_days_supply} days (Issue date unknown).", "ref": row['Reference_No']})
-                    except: 
-                        return jsonify({"response": "Cannot calculate supply (check dose/qty).", "ref": row['Reference_No']})
 
-        # 2. ASK GEMINI AI
-        patient_context = "No specific patient selected from the table."
+                            if remaining_days <= 0:
+                                return jsonify({
+                                    "response": f"⚠️ Medicine supply for {row['patientname']} has finished.",
+                                    "ref": row['Reference_No']
+                                })
+                            else:
+                                return jsonify({
+                                    "response": f"📅 {row['patientname']} has approx <b>{remaining_days} days</b> of medicine left.",
+                                    "ref": row['Reference_No']
+                                })
+                        else:
+                            return jsonify({
+                                "response": f"Total supply: {total_days_supply} days (Issue date unknown).",
+                                "ref": row['Reference_No']
+                            })
+
+                    except:
+                        return jsonify({
+                            "response": "Cannot calculate supply (check dose/qty).",
+                            "ref": row['Reference_No']
+                        })
+
+        # Gemini AI response
+        patient_context = "No specific patient selected."
+
         if context_ref:
             conn = get_db_connection()
             cur = conn.cursor(dictionary=True)
+
             cur.execute("SELECT * FROM hospital WHERE Reference_No=%s", (context_ref,))
             row = cur.fetchone()
+
+            cur.close()
             conn.close()
+
             if row:
-                # UPDATED: Added Disease to AI Context
-                patient_context = (f"Patient Name: {row['patientname']}, Age: {calculate_age(row['DOB'])}, "
-                                   f"Condition: {row.get('Disease', 'Unknown')}, Medicine: {row['Nameoftablets']}, "
-                                   f"Dose: {row['dose']}, RefID: {row['Reference_No']}")
+                patient_context = (
+                    f"Patient Name: {row['patientname']}, "
+                    f"Age: {calculate_age(row['DOB'])}, "
+                    f"Condition: {row.get('Disease','Unknown')}, "
+                    f"Medicine: {row['Nameoftablets']}, "
+                    f"Dose: {row['dose']}"
+                )
 
         prompt = f"Context: {patient_context}\nUser: {user_text}\nAnswer briefly as a medical assistant."
         ai_response = model.generate_content(prompt)
+
         bot_reply = ai_response.text.replace("\n", "<br>")
-        
+
         return jsonify({"response": f"🤖 <b>AI:</b> {bot_reply}"})
 
     except Exception as e:
-        print("Error:", e)
-        return jsonify({"response": "I'm having trouble connecting to the AI brain right now. Please check your internet connection."}), 500
+        return jsonify({"response": f"Chat Error: {str(e)}"}), 500
 
 @app.route('/scan_prescription', methods=['POST'])
 def scan_prescription():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-    
     file = request.files['file']
-    
-    try:
-        img = Image.open(file)
-        custom_config = r'--oem 3 --psm 6'
-        extracted_text = pytesseract.image_to_string(img, config=custom_config)
-        
-        data = {"pname": "", "name": "", "raw_text": extracted_text}
-        
-        for line in extracted_text.split('\n'):
-            l = line.lower().strip()
-            if "name" in l or "patient" in l:
-                cleaned = re.sub(r"(patient|name|:|[^a-zA-Z\s])", "", l, flags=re.IGNORECASE).strip()
-                if len(cleaned) > 2: data["pname"] = cleaned.title()
-            if any(m in l for m in ["mg", "paracetamol", "aspirin", "tablet", "capsule", "vaccine", "ativan", "dollo"]):
-                data["name"] = line.strip()
-        
-        return jsonify(data)
+    img = Image.open(file)
+    text = pytesseract.image_to_string(img)
 
+    return jsonify({
+        "raw_text": text.replace("\n","<br>")
+    })
+
+@app.route('/health_assessment',methods=['POST'])
+def health_assessment():
+    try:
+        data=request.json
+        name = data.get('name','')
+        age = data.get('age','')
+        symptoms = data.get('symptoms','')
+        visited = data.get('visitedDoctor','')
+        medicine = data.get('medicine','')
+        
+        prompt=f"""
+        You are a hospital AI assistant.
+        
+        Patient:
+        Name: {name}
+        Age: {age}
+        Symptoms: {symptoms}
+        Visited Doctor: {visited}
+        Current Medicine: {medicine}
+        
+        Give a SHORT answer in very simple words.
+        
+        Format:
+        
+        Possible issue:
+        - (1 or 2 possible diseases only)
+    
+        Medicine that may help:
+        - (1 or 2 common medicines)
+        
+        Precautions:
+        - (2 short points)
+        
+        End with a note saying in bold: 
+        "Please consult a doctor before taking any medicine."
+        
+        Keep the answer under 80 words and use only simple words.
+        """
+        
+        response= model.generate_content(prompt)
+        
+        return jsonify({
+            "response":response.text.replace("\n","<br>")
+        })
+    
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "response": f"Error: {str(e)}"
+        })
+
 
 if __name__ == '__main__':
     app.run(debug=True)

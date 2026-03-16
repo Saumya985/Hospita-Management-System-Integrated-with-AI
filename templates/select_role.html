@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Hospital Login</title>
+<style>
+body{font-family:Arial;background:#f5efef}
+.box{width:400px;margin:120px auto;background:white;padding:30px;border-radius:8px;text-align:center}
+select,button{width:100%;padding:10px;margin-top:15px}
+button{background-color: #4caf50;}
+</style>
+</head>
+<body>
+
+<div class="box">
+<h2>Hospital Login</h2>
+
+<form method="POST" action="/choose_role">
+<select name="role" required>
+<option value="">Select Role</option>
+<option value="doctor">Doctor</option>
+<option value="patient">Patient</option>
+</select>
+
+<button type="submit">Next</button>
+</form>
+
+</div>
+
+</body>
+</html>

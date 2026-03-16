@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* INLINE CSS FOR OCR & LAYOUT FIXES */
+        .table-container { 
+            overflow-x: auto; 
+            white-space: nowrap; 
+        }
+        
+        .ocr-box {
+            background: #e8f5e9; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+            border: 2px dashed #4caf50;
+            text-align: center;
+        }
+
+        .ai-btn {
+            background:#fa9a14;
+            color:white;
+            padding:8px 15px;
+            text-decoration:none;
+            border-radius:5px;
+            font-weight:bold;
+            margin-top: 10px;
+        }
+
+        .ai-btn:hover { background:#e68900; }
+
+
+        .ocr-btn {
+            background: #2e7d32; 
+            color: white; 
+            border: none; 
+            padding: 8px 15px; 
+            cursor: pointer; 
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .ocr-btn:hover { background: #1b5e20; }
+        
+        .btn-quick { 
+            flex: 1; 
+            padding: 6px; 
+            background: #f5f5f5; 
+            border: 1px solid #ddd; 
+            border-radius: 15px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 11px; 
+            color: #555;
+            transition: background 0.2s;
+        }
+        .btn-quick:hover { background: #e0e0e0; color: #000; }
+
+         .header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:15px 25px;
+            background:#32435c;
+            color:white;
+        }
+
+        .logout-btn{
+            background:#d32f2f;
+            padding:8px 12px;
+            color:white;
+            text-decoration:none;
+            border-radius:5px;
+            margin-left:10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+
+    <div>
+        <h2>HOSPITAL MANAGEMENT SYSTEM (AI INTEGRATED)</h2>
+    </div>
+
+    <div>
+        <span>Logged in as: <b>{{ session['user'] }}</b></span>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</div>
+
+<div class="container">
+    <div class="form-container">
+        <div class="ocr-box">
+            <h3 style="margin-top: 0; color: #2e7d32;">🤖 AI Risk Prediction</h3>
+            <p style="font-size: 14px; color: #555;">Click below button to predict medicine risk.</p>
+            <a href="{{ url_for('predict') }}" class="ai-btn"> Predict Risk</a>
+            <div id="ocrStatus" style="margin-top: 10px; font-weight: bold; font-size: 13px; color: #333;"></div>
+        </div>
+
+        <form id="patientForm" action="/add" method="POST">
+            <div class="form-grid">
+                <div class="form-group" style="grid-column: span 2; background: #e3f2fd; padding: 10px; border-radius: 5px;">
+                    <label style="color: #0d47a1; font-weight: bold;">👨‍⚕️ Assign Doctor</label>
+                    <input type="text"
+                    value="{{ patient.doctor if patient else '' }}"
+                    readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Name of Tablets</label>
+                    <input type="text"
+                    name="name"
+                    id="name"
+                    value="{{ patient.Nameoftablets if patient else '' }}"
+                    readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Reference No</label>
+                    <input type="text" name="ref" id="ref" 
+                    value="{{patient.Reference_No if patient else ''}}"
+                    readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label>Disease / Condition</label>
+                    <input type="text" name="disease" id="disease" 
+                    value="{{ patient.Disease if patient else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Dose</label>
+                    <input type="text" name="dose" id="dose" 
+                    value="{{ patient.dose if patient else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label>No of Tablets</label>
+                    <input type="text" name="no_of_tablets" id="no_of_tablets" 
+                    value="{{ patient.Numbersoftablets if patient else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Lot</label>
+                    <input type="text" name="lot" id="lot" 
+                    value="{{ patient.lot if patient else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Issue Date</label>
+                    <input type="date" name="issue_date" id="issue_date"
+                    value="{{ patient.issuedate if patient else '' }}">>
+                </div>
+
+                <div class="form-group">
+                    <label>Exp Date</label>
+                    <input type="date" name="exp_date" id="exp_date"
+                    value="{{ patient.expdate if patient else '' }}">>
+                </div>
+
+                <div class="form-group">
+                    <label>Daily Dose</label>
+                    <input type="text" name="daily_dose" id="daily_dose"
+                    value="{{ patient.dailydose if patient else '' }}"
+                    readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Storage Advice</label>
+                    <input type="text" name="storage" id="storage"
+                    value="{{ patient.storage if patient else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label>NHS Number</label>
+                    <input type="text" name="nhs" id="nhs" 
+                    value="{{ patient.nhsnumber if patient else '' }}"
+                    readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Patient Name</label>
+                    <input type="text" name="pname" id="pname" 
+                    value="{{ patient.patientname if patient else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <input type="text" name="dob" id="dob" 
+                    value="{{ patient.DOB if patient else '' }}"
+                    readonly>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Address</label>
+                    <input type="text" name="address" id="address" 
+                    value="{{ patient.patientaddress if patient else '' }}"
+                    readonly>
+                </div>
+            </div>
+
+            <div class="btn-group">
+               <button type="reset" class="btn btn-clear">Clear Form</button>
+            </div>
+        </form>
+    </div>
+
+
+
+<div id="robot-icon" onclick="toggleChat()">
+    <img src="{{ url_for('static', filename='robo.webp') }}" alt="AI Help">
+</div>
+
+<div id="chat-popup" class="chat-box" style="display: none;">
+    <div class="chat-header" style="background: #0d47a1; color: white; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: bold;">🤖 AI Health Assistant</span>
+        <button onclick="toggleChat()" style="background:none; border:none; color:white; font-size:20px; cursor:pointer;">✖</button>
+    </div>
+    
+    <div id="chat-history" class="chat-history" style="height: 320px; overflow-y: auto; padding: 10px; background: #f9f9f9;">
+        <div class="bot-msg" style="color: #2e7d32; font-weight: bold; margin-bottom: 10px;">
+            Hello! I am your Hospital AI medical assistant. Ask about your symptoms or type a Ref No (e.g., 666) to start.
+        </div>
+    </div>
+    
+    <div class="quick-actions" style="padding: 8px; background: #eeeeee; display: flex; gap: 8px; border-top: 1px solid #ddd;">
+        <button onclick="document.getElementById('ocrImage').click()" class="btn-quick">📷 OCR</button>
+        <button onclick="startNewUserFlow()" class="btn-quick">🆕 New User</button>
+        <button onclick="triggerQuickAction('supply')" class="btn-quick">Supply</button>
+    </div>
+
+    <div class="chat-input" style="padding:10px;border-top:1px solid #ccc;display:flex;gap:8px;background:white;align-items:center">
+        <input type="text" id="user-input"
+        placeholder="Ask about dosage, supply, or health..."
+        style="flex:1;padding:8px;border-radius:4px;border:1px solid #ccc">
+        
+        <!-- Hidden camera input -->
+        <input type="file" 
+            id="ocrImage" 
+            accept="image/*" 
+            capture="environment" 
+            style="display:none">
+
+        <!-- Camera button -->
+        <button onclick="document.getElementById('ocrImage').click()"
+            style="background:#2e7d32;color:white;border:none;padding:8px 10px;border-radius:4px;cursor:pointer">📷
+        </button>
+        
+        <button onclick="sendMessage()"
+            style="padding:8px 15px;background:#0d47a1;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+            Send
+        </button>
+
+</div>
+
+</div>
+
+<script>
+    let currentRef = "";
+
+    // ⌨️ Event Listener for 'Enter' Key
+    document.getElementById("user-input").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+        
+
+    function toggleChat() {
+        const chatBox = document.getElementById('chat-popup');
+        chatBox.style.display = (chatBox.style.display === "none") ? "flex" : "none";
+    }
+
+    function triggerQuickAction(actionType) {
+        document.getElementById("user-input").addEventListener("keypress", function(event){
+            
+            if(event.key==="Enter"){
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
+    // 💬 Chat and Context Syncing
+    function sendMessage() {
+        const input = document.getElementById("user-input");
+        const history = document.getElementById("chat-history");
+        const text = input.value.trim();
+        
+        if(!text) return;
+        
+        /* USER MESSAGE DISPLAY */
+        history.innerHTML += `
+        
+        <div class="user-msg" style="text-align:right;color:#0d47a1;margin:10px 0">
+            <b>You:</b> ${text}
+        </div>
+        `;
+        
+        input.value = "";
+        
+        /* NEW USER FLOW */
+        if(newUserMode){
+            
+            if(newUserStep===1){
+                newUserData.name=text;
+                newUserStep=2;
+                history.innerHTML+=`
+                <div class="bot-msg">
+                    <b>2️⃣ What is the patient's age?</b>
+                </div>
+                `;
+            }
+            
+            else if(newUserStep===2){
+                newUserData.age=text;
+                newUserStep=3;
+                history.innerHTML+=`
+                
+                <div class="bot-msg">
+                    <b>3️⃣ What symptoms have you noticed in the past few days?</b>
+                </div>
+                `;
+            }
+            
+            else if(newUserStep===3){
+                newUserData.symptoms=text;
+                newUserStep=4;
+                history.innerHTML+=`
+                
+                <div class="bot-msg">
+                    <b>4️⃣ Have you visited any doctor recently?</b>
+                </div>
+                `;
+            }
+            
+            else if(newUserStep===4){
+                newUserData.visitedDoctor=text;
+                newUserStep=5;
+                history.innerHTML+=`
+                
+                <div class="bot-msg">
+                    <b>5️⃣ Are you taking any medicine currently?</b>
+                </div>
+                `;
+            }
+            
+            else if(newUserStep===5){
+                newUserData.medicine=text;
+                fetch("/health_assessment",{
+                    method:"POST",
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify(newUserData)
+                })
+                
+                .then(res=>res.json())
+                .then(data=>{
+                    history.innerHTML+=`
+                    <div class="bot-msg">
+                        ${data.response}
+                    </div>
+                    `;
+                });
+                
+                newUserMode=false;
+            }
+            history.scrollTop=history.scrollHeight;
+            
+            return;
+        }
+
+        /* NORMAL CHAT */      
+        fetch('/chat', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({message:text})
+        })
+        
+        .then(res=>res.json())
+        .then(data=>{
+            
+            history.innerHTML += `
+            <div class="bot-msg" style="color:#2e7d32;margin:10px 0">
+                <b>Bot:</b> ${data.response}
+            </div>
+            `;
+            
+            if(data.ref){
+                currentRef=data.ref;
+            }
+            history.scrollTop = history.scrollHeight;
+        })
+        .catch(error => {
+            console.error('Chat Error:', error);
+            
+            history.innerHTML += `
+            <div class="bot-msg" style="color:red">Error: AI Connection lost.</div>
+            `;
+        });
+    }
+        
+
+        
+
+
+    document.getElementById("ocrImage").addEventListener("change", function(){
+        
+        const file = this.files[0];
+        if(!file) return;
+        
+        const history = document.getElementById("chat-history");
+        history.innerHTML += `
+        
+        <div class="user-msg" style="text-align:right;color:#0d47a1;margin:10px 0">
+            <b>You:</b> 📷 Prescription uploaded
+        </div>
+        `;
+        
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        fetch("/scan_prescription",{
+            method:"POST",
+            body:formData
+        })
+        
+        .then(res=>res.json())
+        .then(data=>{
+            history.innerHTML += `
+            
+            <div class="bot-msg" style="color:#2e7d32;margin:10px 0;border-left:3px solid #2e7d32;padding-left:6px">
+                <b>OCR Result:</b><br>${data.raw_text}
+            </div>
+            `;
+            
+            history.scrollTop = history.scrollHeight;
+        })
+        
+        .catch(err=>{
+            console.error(err);
+        });
+    });
+
+    let newUserMode=false;
+    let newUserStep=0;
+    let newUserData={};
+    
+    function startNewUserFlow(){
+        newUserMode=true;
+        newUserStep=1;
+        
+        const history=document.getElementById("chat-history");
+        
+        history.innerHTML+=`
+        
+        <div class="bot-msg" style="color:#2e7d32;margin:10px 0">
+            Hello 👋 I will ask a few questions to understand your health condition.<br><br>
+            <b>1️⃣ What is the patient's name?</b>
+            </div
+            `;
+            
+            history.scrollTop=history.scrollHeight;
+        }
+
+
+</script>
+
+</body>
+</html>
